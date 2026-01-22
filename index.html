@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Inventory Barang</title>
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+.box{background:#fff;padding:15px;border-radius:8px;margin-bottom:15px}
+.hidden{display:none}
+input,select,button{padding:6px;margin:4px}
+table{width:100%;border-collapse:collapse;background:#fff}
+th,td{border:1px solid #ccc;padding:6px;text-align:center}
+th{background:#007bff;color:#fff}
+a{cursor:pointer;color:blue;text-decoration:underline}
+.top{display:flex;justify-content:space-between}
+button{cursor:pointer}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginBox" class="box">
+<h3>🔐 Login</h3>
+<input id="user" placeholder="Username"><br>
+<input id="pass" type="password" placeholder="Password"><br>
+<button onclick="login()">Login</button>
+<p id="msg" style="color:red"></p>
+</div>
+
+<div id="app" class="hidden">
+
+<div class="top">
+<h2>📦 Inventory Barang PT. Tjakrindo Mas</h2>
+<div>
+<button onclick="exportExcel()">📤 Export Excel</button>
+<button onclick="logout()">Logout</button>
+</div>
+</div>
+
+<!-- FORM -->
+<div class="box">
+<input id="kode" placeholder="Kode Barang" onkeyup="autoNama()">
+<input id="nama" placeholder="Nama Barang">
+<input id="tanggal" type="date">
+<input id="jumlah" type="number" placeholder="Jumlah">
+<select id="jenis">
+<option value="masuk">Barang Masuk</option>
+<option value="keluar">Barang Keluar</option>
+</select>
+<input id="pemakai" placeholder="Nama Pemakai / Bon">
+<br>
+<button onclick="simpan()">Simpan</button>
+<button onclick="resetForm()">Reset</button>
+</div>
+
+🔍 <input id="cari" placeholder="Cari kode / nama" onkeyup="tampilInventory()">
+
+<!-- INVENTORY -->
+<div id="inventory">
+<table>
+<thead>
+<tr>
+<th>Kode</th>
+<th>Nama</th>
+<th>Stok</th>
+<th>Terpakai</th>
+<th>Tanggal Stok Terakhir</th>
+<th>Aksi</th>
+</tr>
+</thead>
+<tbody id="tabelInventory"></tbody>
+</table>
+</div>
+
+<!-- DETAIL MASUK -->
+<div id="detailMasukBox" class="hidden">
+<h3>📦 Detail Stok Masuk</h3>
+<button onclick="kembali()">⬅ Kembali</button>
+<table>
+<thead>
+<tr><th>Kode</th><th>Nama</th><th>Jumlah</th><th>Tanggal & Jam</th></tr>
+</thead>
+<tbody id="tabelMasuk"></tbody>
+</table>
+</div>
+
+<!-- DETAIL KELUAR -->
+<div id="detailKeluarBox" class="hidden">
+<h3>🧾 Detail Pemakai / Ngebon</h3>
+<button onclick="kembali()">⬅ Kembali</button>
+<table>
+<thead>
+<tr><th>Kode</th><th>Nama</th><th>Jumlah</th><th>Pemakai</th><th>Tanggal & Jam</th></tr>
+</thead>
+<tbody id="tabelKeluar"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+/* LOGIN */
+const USER="admin",PASS="12345";
+if(localStorage.getItem("login")==="1") showApp();
+function login(){
+if(user.value===USER && pass.value===PASS){
+localStorage.setItem("login","1");showApp();
+}else msg.innerText="Login salah";
+}
+function logout(){localStorage.removeItem("login");location.reload()}
+function showApp(){loginBox.classList.add("hidden");app.classList.remove("hidden")}
+
+/* DATA */
+let barang=JSON.parse(localStorage.getItem("barang"))||[];
+let masukLog=JSON.parse(localStorage.getItem("masukLog"))||[];
+let keluarLog=JSON.parse(localStorage.getItem("keluarLog"))||[];
+let editIndex=null;
+
+tanggal.value=new Date().toISOString().split("T")[0];
+
+/* AUTO NAMA */
+function autoNama(){
+let b=barang.find(x=>x.kode===kode.value);
+if(b) nama.value=b.nama;
+}
+
+/* SIMPAN */
+function simpan(){
+let k=kode.value.trim(),n=nama.value.trim();
+let j=Number(jumlah.value),t=tanggal.value;
+let p=pemakai.value.trim(),tipe=jenis.value;
+
+if(!k||!n) return alert("Kode & Nama wajib!");
+if(!j||j<=0) return alert("Jumlah wajib > 0!");
+if(!t) return alert("Tanggal wajib!");
+if(tipe==="keluar" && !p) return alert("Pemakai wajib!");
+
+let b=barang.find(x=>x.kode===k);
+
+if(editIndex!==null){
+barang[editIndex].kode=k;
+barang[editIndex].nama=n;
+editIndex=null;
+}else{
+if(!b){
+b={kode:k,nama:n,stok:0,tanggal:"-"};
+barang.push(b);
+}
+if(tipe==="masuk"){
+b.stok+=j;
+b.tanggal=t;
+masukLog.push({kode:k,nama:n,jumlah:j,waktu:t+" "+new Date().toLocaleTimeString("id-ID")});
+}else{
+if(b.stok<j) return alert("Stok tidak cukup!");
+b.stok-=j;
+keluarLog.push({kode:k,nama:n,jumlah:j,pemakai:p,waktu:t+" "+new Date().toLocaleTimeString("id-ID")});
+}
+}
+
+simpanLocal();
+tampilInventory();resetForm();
+}
+
+/* INVENTORY */
+function tampilInventory(){
+let key=cari.value.toLowerCase(),html="";
+barang.forEach((b,i)=>{
+if(b.kode.toLowerCase().includes(key)||b.nama.toLowerCase().includes(key)){
+let terpakai=keluarLog.filter(l=>l.kode===b.kode)
+.reduce((a,c)=>a+c.jumlah,0);
+html+=`
+<tr>
+<td>${b.kode}</td>
+<td>${b.nama}</td>
+<td><a onclick="showDetailMasuk('${b.kode}')">${b.stok}</a></td>
+<td><a onclick="showDetailKeluar('${b.kode}')">${terpakai}</a></td>
+<td>${b.tanggal}</td>
+<td>
+<button onclick="editBarang(${i})">Edit</button>
+<button onclick="hapusBarang(${i})">Hapus</button>
+</td>
+</tr>`;
+}});
+tabelInventory.innerHTML=html;
+}
+
+/* DETAIL */
+function showDetailMasuk(k){
+inventory.classList.add("hidden");
+detailMasukBox.classList.remove("hidden");
+tabelMasuk.innerHTML=masukLog.filter(l=>l.kode===k)
+.map(l=>`<tr><td>${l.kode}</td><td>${l.nama}</td><td>${l.jumlah}</td><td>${l.waktu}</td></tr>`).join("");
+}
+function showDetailKeluar(k){
+inventory.classList.add("hidden");
+detailKeluarBox.classList.remove("hidden");
+tabelKeluar.innerHTML=keluarLog.filter(l=>l.kode===k)
+.map(l=>`<tr><td>${l.kode}</td><td>${l.nama}</td><td>${l.jumlah}</td><td>${l.pemakai}</td><td>${l.waktu}</td></tr>`).join("");
+}
+
+/* EDIT & HAPUS (FIX BUG) */
+function editBarang(i){
+kode.value=barang[i].kode;
+nama.value=barang[i].nama;
+editIndex=i;
+}
+function hapusBarang(i){
+if(confirm("Hapus barang beserta seluruh riwayat?")){
+let k=barang[i].kode;
+barang.splice(i,1);
+masukLog=masukLog.filter(l=>l.kode!==k);
+keluarLog=keluarLog.filter(l=>l.kode!==k);
+simpanLocal();tampilInventory();
+}
+}
+
+/* EXPORT EXCEL */
+function exportExcel(){
+let csv="Kode,Nama,Stok,Terpakai,Tanggal\n";
+barang.forEach(b=>{
+let terpakai=keluarLog.filter(l=>l.kode===b.kode)
+.reduce((a,c)=>a+c.jumlah,0);
+csv+=`${b.kode},${b.nama},${b.stok},${terpakai},${b.tanggal}\n`;
+});
+let blob=new Blob([csv],{type:"text/csv"});
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="inventory.csv";
+a.click();
+}
+
+/* UTIL */
+function kembali(){
+detailMasukBox.classList.add("hidden");
+detailKeluarBox.classList.add("hidden");
+inventory.classList.remove("hidden");
+}
+function resetForm(){
+kode.value=nama.value=jumlah.value=pemakai.value="";
+tanggal.value=new Date().toISOString().split("T")[0];
+editIndex=null;
+}
+function simpanLocal(){
+localStorage.setItem("barang",JSON.stringify(barang));
+localStorage.setItem("masukLog",JSON.stringify(masukLog));
+localStorage.setItem("keluarLog",JSON.stringify(keluarLog));
+}
+
+tampilInventory();
+</script>
+
+</body>
+</html>
