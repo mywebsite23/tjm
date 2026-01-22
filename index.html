@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Inventory Barang Mekanik Tjakrindo Mas</title>
+<title>Inventory Barang</title>
 <style>
 body{font-family:Arial;background:#f4f6f8;padding:20px}
 .box{background:#fff;padding:15px;border-radius:8px;margin-bottom:15px}
@@ -15,6 +15,8 @@ a{cursor:pointer;color:blue;text-decoration:underline}
 .top{display:flex;justify-content:space-between}
 button{cursor:pointer}
 </style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
@@ -31,7 +33,7 @@ button{cursor:pointer}
 <div id="app" class="hidden">
 
 <div class="top">
-<h2>📦 Inventory Barang Departemen Mekanik PT. Tjakrindo Mas</h2>
+<h2>📦 Inventory Barang PT. Tjakrindo Mas</h2>
 <div>
 <button onclick="exportExcel()">📤 Export Excel</button>
 <button onclick="logout()">Logout</button>
@@ -100,22 +102,47 @@ button{cursor:pointer}
 </div>
 
 <script>
+    const firebaseConfig = {
+  apiKey: "ISI_DARI_FIREBASE",
+  authDomain: "ISI_DARI_FIREBASE",
+  databaseURL: "ISI_DARI_FIREBASE",
+  projectId: "ISI_DARI_FIREBASE"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 /* LOGIN */
 const USER="admin",PASS="12345";
 if(localStorage.getItem("login")==="1") showApp();
 function login(){
-if(user.value===USER && pass.value===PASS){
-localStorage.setItem("login","1");showApp();
-}else msg.innerText="Login salah";
+  if(
+    userInput.value.trim() === USER &&
+    passInput.value.trim() === PASS
+  ){
+    localStorage.setItem("login","1");
+    showApp();
+  } else {
+    msg.innerText = "❌ Username atau password salah";
+  }
 }
+
 function logout(){localStorage.removeItem("login");location.reload()}
 function showApp(){loginBox.classList.add("hidden");app.classList.remove("hidden")}
 
 /* DATA */
-let barang=JSON.parse(localStorage.getItem("barang"))||[];
-let masukLog=JSON.parse(localStorage.getItem("masukLog"))||[];
-let keluarLog=JSON.parse(localStorage.getItem("keluarLog"))||[];
-let editIndex=null;
+let barang = [];
+let masukLog = [];
+let keluarLog = [];
+
+db.ref("inventory").on("value", snap => {
+  const data = snap.val() || {};
+  barang = data.barang || [];
+  masukLog = data.masukLog || [];
+  keluarLog = data.keluarLog || [];
+  tampilInventory();
+});
+
 
 tanggal.value=new Date().toISOString().split("T")[0];
 
@@ -241,16 +268,17 @@ kode.value=nama.value=jumlah.value=pemakai.value="";
 tanggal.value=new Date().toISOString().split("T")[0];
 editIndex=null;
 }
-function simpanLocal(){
-localStorage.setItem("barang",JSON.stringify(barang));
-localStorage.setItem("masukLog",JSON.stringify(masukLog));
-localStorage.setItem("keluarLog",JSON.stringify(keluarLog));
+ffunction simpanLocal(){
+  db.ref("inventory").set({
+    barang,
+    masukLog,
+    keluarLog
+  });
 }
+
 
 tampilInventory();
 </script>
 
 </body>
 </html>
-
-
