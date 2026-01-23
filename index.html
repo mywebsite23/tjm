@@ -15,8 +15,6 @@ a{cursor:pointer;color:blue;text-decoration:underline}
 .top{display:flex;justify-content:space-between}
 button{cursor:pointer}
 </style>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
@@ -102,47 +100,22 @@ button{cursor:pointer}
 </div>
 
 <script>
-    const firebaseConfig = {
-  apiKey: "ISI_DARI_FIREBASE",
-  authDomain: "ISI_DARI_FIREBASE",
-  databaseURL: "ISI_DARI_FIREBASE",
-  projectId: "ISI_DARI_FIREBASE"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
 /* LOGIN */
 const USER="admin",PASS="12345";
 if(localStorage.getItem("login")==="1") showApp();
 function login(){
-  if(
-    userInput.value.trim() === USER &&
-    passInput.value.trim() === PASS
-  ){
-    localStorage.setItem("login","1");
-    showApp();
-  } else {
-    msg.innerText = "❌ Username atau password salah";
-  }
+if(user.value===USER && pass.value===PASS){
+localStorage.setItem("login","1");showApp();
+}else msg.innerText="Login salah";
 }
-
 function logout(){localStorage.removeItem("login");location.reload()}
 function showApp(){loginBox.classList.add("hidden");app.classList.remove("hidden")}
 
 /* DATA */
-let barang = [];
-let masukLog = [];
-let keluarLog = [];
-
-db.ref("inventory").on("value", snap => {
-  const data = snap.val() || {};
-  barang = data.barang || [];
-  masukLog = data.masukLog || [];
-  keluarLog = data.keluarLog || [];
-  tampilInventory();
-});
-
+let barang=JSON.parse(localStorage.getItem("barang"))||[];
+let masukLog=JSON.parse(localStorage.getItem("masukLog"))||[];
+let keluarLog=JSON.parse(localStorage.getItem("keluarLog"))||[];
+let editIndex=null;
 
 tanggal.value=new Date().toISOString().split("T")[0];
 
@@ -269,17 +242,22 @@ tanggal.value=new Date().toISOString().split("T")[0];
 editIndex=null;
 }
 function simpanLocal(){
-  db.ref("inventory").set({
-    barang,
-    masukLog,
-    keluarLog
-  });
+localStorage.setItem("barang",JSON.stringify(barang));
+localStorage.setItem("masukLog",JSON.stringify(masukLog));
+localStorage.setItem("keluarLog",JSON.stringify(keluarLog));
 }
-
 
 tampilInventory();
 </script>
+<!-- 1️⃣ Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+<!-- 2️⃣ Firebase Config -->
+<script src="firebase.js"></script>
+
+<!-- 3️⃣ Script aplikasi kamu -->
+<script src="app.js"></script>
 
 </body>
 </html>
-
